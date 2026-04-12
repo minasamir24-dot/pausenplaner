@@ -384,10 +384,9 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
         const firebaseConfig = {
             apiKey: "AIzaSyBS3pWs4nm_hmaAGCvuaHTKxlppWgb4-2Q",
             authDomain: "pausenplanner.firebaseapp.com",
@@ -398,8 +397,8 @@
             measurementId: "G-FB7LYGTGMX"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
         
         let currentUser = null;
         let currentRole = 'employee';
@@ -413,9 +412,12 @@
         const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
         async function loadBreaks() {
-            const q = query(collection(db, "breaks"), orderBy("date"), orderBy("time"));
+            const q = db.collection("breaks").orderBy("date").orderBy("time");
             const snapshot = await getDocs(q);
-            breaks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            breaks = [];
+            snapshot.forEach(doc => {
+                breaks.push({ id: doc.id, ...doc.data() });
+            });
             if (selectedDate) {
                 renderCalendar();
                 updateDayView();
@@ -423,9 +425,12 @@
         }
 
         function subscribeToBreaks() {
-            const q = query(collection(db, "breaks"), orderBy("date"), orderBy("time"));
+            const q = db.collection("breaks").orderBy("date").orderBy("time");
             unsubscribe = onSnapshot(q, (snapshot) => {
-                breaks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                breaks = [];
+                snapshot.forEach(doc => {
+                    breaks.push({ id: doc.id, ...doc.data() });
+                });
                 if (selectedDate) {
                     renderCalendar();
                     updateDayView();
@@ -673,7 +678,7 @@
                 return;
             }
             
-            await addDoc(collection(db, "breaks"), {
+            await db.collection("breaks").add({
                 name: currentUser,
                 date: selectedDate,
                 time: time,
@@ -687,12 +692,12 @@
             const myBreak = breaks.find(b => b.date === selectedDate && b.name === currentUser);
             
             if (myBreak) {
-                await deleteDoc(doc(db, "breaks", myBreak.id));
+                await db.collection("breaks").doc(myBreak.id).delete();
                 showMessage('Pause erfolgreich storniert.', 'success');
             }
         }
 
-        renderCalendar();
+renderCalendar();
     </script>
 </body>
 </html>

@@ -23,12 +23,11 @@
         .role-option.selected { border-color: var(--primary); background: rgba(46,125,50,0.1); }
         .role-option.manager.selected { border-color: var(--secondary); background: rgba(21,101,192,0.1); }
         .hidden { display: none; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem; }
         .badge-employee { background: var(--primary); color: white; }
         .badge-manager { background: var(--secondary); color: white; }
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .calendar-nav button { width: auto; padding: 0.5rem 1rem; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
         .weekday { text-align: center; font-weight: bold; padding: 0.5rem; font-size: 0.875rem; color: #666; }
         .day { padding: 0.75rem; text-align: center; cursor: pointer; border-radius: 4px; position: relative; }
@@ -36,23 +35,19 @@
         .day.selected { background: var(--primary); color: white; }
         .day.today { border: 2px solid var(--primary); }
         .day.other-month { color: #ccc; }
-        .day.has-booking::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--kitchen); }
-        .day.has-booking-both::after { background: linear-gradient(90deg, var(--kitchen) 50%, var(--basement) 50%); }
         .booking-form { border-top: 1px solid #eee; padding-top: 1rem; margin-top: 1rem; }
         .location-options { display: flex; gap: 1rem; margin-bottom: 1rem; }
         .location-option { flex: 1; padding: 1rem; border: 2px solid #ddd; border-radius: 4px; cursor: pointer; text-align: center; }
-        .location-option.selected { border-color: var(--primary); background: rgba(46,125,50,0.1); }
+        .location-option.selected { border-color: var(--primary); background: rgba(46,125,50,0.1); background: #e8f5e9; }
         .bookings-table { width: 100%; border-collapse: collapse; }
         .bookings-table th, .bookings-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
-        .bookings-table th { background: #f9f9f9; font-weight: 600; }
         .location-keller { color: var(--basement); font-weight: 500; }
         .location-küche { color: var(--kitchen); font-weight: 500; }
         .message { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; }
         .message.error { background: #ffebee; color: var(--error); }
         .message.success { background: #e8f5e9; color: var(--success); }
-        .my-booking { background: rgba(46,125,50,0.1); border-radius: 4px; padding: 1rem; margin-bottom: 1rem; }
-        .my-booking h3 { color: var(--success); margin-bottom: 0.5rem; }
-        @media (max-width: 480px) { .role-select, .location-options { flex-direction: column; } }
+        .my-booking { background: #e8f5e9; border-radius: 4px; padding: 1rem; margin-bottom: 1rem; }
+        .my-booking h3 { color: var(--success); }
     </style>
 </head>
 <body>
@@ -63,71 +58,70 @@
             <div class="card">
                 <h2>Anmeldung</h2>
                 <div class="role-select">
-                    <div class="role-option employee selected" id="role-employee" onclick="App.selectRole('employee')">Mitarbeiter</div>
-                    <div class="role-option manager" id="role-manager" onclick="App.selectRole('manager')">Leiter</div>
+                    <div class="role-option" id="btn-mitarbeiter" onclick="selectRole('employee')">Mitarbeiter</div>
+                    <div class="role-option" id="btn-leiter" onclick="selectRole('manager')">Leiter</div>
                 </div>
-                <div id="name-input-container">
+                <div id="name-div">
                     <label>Name:</label>
-                    <input type="text" id="employee-name" placeholder="Ihr Name">
+                    <input type="text" id="input-name" placeholder="Ihr Name">
                 </div>
-                <button class="btn btn-primary" onclick="App.login()">Anmelden</button>
+                <button class="btn btn-primary" onclick="doLogin()">Anmelden</button>
             </div>
         </div>
 
         <div id="app-view" class="hidden">
             <div class="card">
                 <div class="header">
-                    <div><span id="welcome-msg"></span> <span id="role-badge" class="badge"></span></div>
-                    <button class="btn btn-secondary" style="width:auto;padding:0.5rem 1rem;" onclick="App.logout()">Abmelden</button>
+                    <div><span id="welcome"></span> <span class="badge" id="badge"></span></div>
+                    <button class="btn btn-secondary" style="width:auto;padding:0.5rem;" onclick="doLogout()">Abmelden</button>
                 </div>
             </div>
 
             <div class="card">
                 <div class="calendar-nav">
-                    <button class="btn btn-primary" style="width:auto;" onclick="App.prevMonth()">&lt;</button>
-                    <span id="month-year" style="font-weight:bold;"></span>
-                    <button class="btn btn-primary" style="width:auto;" onclick="App.nextMonth()">&gt;</button>
+                    <button class="btn btn-primary" style="width:40px;" onclick="changeMonth(-1)">&lt;</button>
+                    <strong id="month-label"></strong>
+                    <button class="btn btn-primary" style="width:40px;" onclick="changeMonth(1)">&gt;</button>
                 </div>
                 <div class="calendar-grid" id="calendar"></div>
             </div>
 
             <div class="card">
-                <h2>Pausen <span id="selected-day-display"></span></h2>
-                <div id="message-container"></div>
+                <h2 id="day-label"></h2>
+                <div id="message"></div>
                 
-                <div id="bookings-container">
-                    <table class="bookings-table">
-                        <thead><tr><th>Zeit</th><th>Ort</th><th>Name</th></tr></thead>
-                        <tbody id="bookings-body"></tbody>
-                    </table>
-                </div>
+                <table class="bookings-table">
+                    <thead><tr><th>Zeit</th><th>Ort</th><th>Name</th></tr></thead>
+                    <tbody id="breaks-list"></tbody>
+                </table>
 
-                <div id="booking-form" class="booking-form hidden">
+                <div id="form-div" class="booking-form hidden">
                     <h3>Pause buchen</h3>
-                    <label>Uhrzeit:</label>
-                    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-                        <select id="break-hour"></select> <span style="align-self:center;">:</span> <select id="break-minute"></select>
-                    </div>
-                    <label>Ort:</label>
+                    <select id="hour-select"></select>
+                    <select id="min-select"></select>
                     <div class="location-options">
-                        <div class="location-option keller" id="loc-keller" onclick="App.selectLocation('Keller')">Keller</div>
-                        <div class="location-option" id="loc-kuche" onclick="App.selectLocation('Küche')">Küche</div>
+                        <div class="location-option" id="opt-keller" onclick="pickLocation('Keller')">Keller</div>
+                        <div class="location-option" id="opt-kuche" onclick="pickLocation('Küche')">Küche</div>
                     </div>
-                    <button class="btn btn-primary" onclick="App.bookBreak()">Pause buchen</button>
+                    <button class="btn btn-primary" onclick="doBook()">Buchen</button>
                 </div>
 
-                <div id="my-booking" class="my-booking hidden">
+                <div id="my-break" class="my-booking hidden">
                     <h3>Ihre Pause</h3>
-                    <p id="my-booking-info"></p>
-                    <button class="btn btn-danger" style="margin-top:0.5rem;" onclick="App.cancelMyBreak()">Stornieren</button>
+                    <p id="break-info"></p>
+                    <button class="btn btn-danger" onclick="doCancel()">Stornieren</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    
     <script>
-    // Firebase config
-    const firebaseConfig = {
+    // ===== CONFIG =====
+    const config = {
         apiKey: "AIzaSyBS3pWs4nm_hmaAGCvuaHTKxlppWgb4-2Q",
         authDomain: "pausenplanner.firebaseapp.com",
         projectId: "pausenplanner",
@@ -136,263 +130,188 @@
         appId: "1:142766491427:web:be22d6087c1ebcb85d2e96"
     };
 
-    // App namespace
-    const App = {
-        db: null,
-        currentUser: null,
-        currentRole: 'employee',
-        currentMonth: new Date().getMonth(),
-        currentYear: new Date().getFullYear(),
-        selectedDate: null,
-        selectedLocation: null,
-        breaks: [],
-        weekdays: ['Mo','Di','Mi','Do','Fr','Sa','So'],
+    // ===== STATE =====
+    let db, user, role = 'employee', month = new Date().getMonth(), year = new Date().getFullYear();
+    let selectedDate, selectedLocation, breaks = [];
 
-        init: async function() {
-            console.log('Initializing...');
-            
-            // Try load Firebase
-            try {
-                const { initializeApp } = firebase;
-                const { getFirestore } = firebase;
-                const app = initializeApp(firebaseConfig);
-                this.db = getFirestore(app);
-                console.log('Firebase OK');
-            } catch(e) {
-                console.error('Firebase error:', e);
-            }
+    // ===== INIT =====
+    firebase.initializeApp(config);
+    db = firebase.firestore();
+    console.log("Firebase ready");
 
-            this.renderCalendar();
-        },
+    // ===== FUNCTIONS =====
+    function selectRole(r) { 
+        role = r;
+        document.getElementById('btn-mitarbeiter').className = r === 'employee' ? 'role-option selected' : 'role-option';
+        document.getElementById('btn-leiter').className = r === 'manager' ? 'role-option selected' : 'role-option';
+        document.getElementById('name-div').style.display = r === 'employee' ? 'block' : 'none';
+    }
 
-        selectRole: function(role) {
-            this.currentRole = role;
-            document.querySelectorAll('.role-option').forEach(el => el.classList.remove('selected'));
-            document.getElementById('role-' + role).classList.add('selected');
-            document.getElementById('name-input-container').style.display = role === 'employee' ? 'block' : 'none';
-        },
+    function doLogin() {
+        let name = document.getElementById('input-name').value.trim();
+        if (role === 'employee' && !name) return alert('Bitte Namen eingeben');
+        user = role === 'manager' ? 'Leiter' : name;
+        
+        document.getElementById('login-view').className = 'hidden';
+        document.getElementById('app-view').className = '';
+        
+        document.getElementById('welcome').innerText = 'Hallo, ' + user + '!';
+        document.getElementById('badge').innerText = role === 'manager' ? 'Leiter' : 'Mitarbeiter';
+        document.getElementById('badge').className = 'badge ' + (role === 'manager' ? 'badge-manager' : 'badge-employee');
+        
+        loadBreaks();
+        drawCalendar();
+        fillTimeSelect();
+    }
 
-        login: function() {
-            const name = document.getElementById('employee-name').value.trim();
-            if (this.currentRole === 'employee' && !name) { 
-                alert('Bitte Namen eingeben'); 
-                return; 
-            }
-            
-            this.currentUser = this.currentRole === 'manager' ? 'Leiter' : name;
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('app-view').classList.remove('hidden');
-            
-            this.updateWelcome();
-            this.loadBreaks();
-            this.renderCalendar();
-            this.updateTimeSelect();
-        },
+    function doLogout() {
+        user = null;
+        selectedDate = null;
+        document.getElementById('app-view').className = 'hidden';
+        document.getElementById('login-view').className = '';
+    }
 
-        logout: function() {
-            this.currentUser = null;
-            this.selectedDate = null;
-            this.selectedLocation = null;
-            document.getElementById('app-view').classList.add('hidden');
-            document.getElementById('login-view').classList.remove('hidden');
-            document.getElementById('employee-name').value = '';
-        },
+    function fillTimeSelect() {
+        let hs = document.getElementById('hour-select');
+        let ms = document.getElementById('min-select');
+        hs.innerHTML = ''; ms.innerHTML = '';
+        for (let h = 8; h <= 17; h++) hs.innerHTML += '<option value="' + h + '">' + h + ' Uhr</option>';
+        ['00','05','10','15','20','25','30','35','40','45','50','55'].forEach(m => ms.innerHTML += '<option value="' + m + '">' + m + '</option>');
+    }
 
-        updateWelcome: function() {
-            document.getElementById('welcome-msg').textContent = 'Hallo, ' + this.currentUser + '!';
-            const badge = document.getElementById('role-badge');
-            badge.textContent = this.currentRole === 'manager' ? 'Leiter' : 'Mitarbeiter';
-            badge.className = 'badge ' + (this.currentRole === 'manager' ? 'badge-manager' : 'badge-employee');
-        },
+    function changeMonth(delta) {
+        month += delta;
+        if (month > 11) { month = 0; year++; }
+        if (month < 0) { month = 11; year--; }
+        drawCalendar();
+    }
 
-        updateTimeSelect: function() {
-            const hs = document.getElementById('break-hour');
-            const ms = document.getElementById('break-minute');
-            hs.innerHTML = ''; ms.innerHTML = '';
-            for (let h = 8; h <= 17; h++) hs.innerHTML += '<option value="' + h + '">' + h + ' Uhr</option>';
-            ['00','05','10','15','20','25','30','35','40','45','50','55'].forEach(m => ms.innerHTML += '<option value="' + m + '">' + m + '</option>');
-        },
+    function drawCalendar() {
+        let cal = document.getElementById('calendar');
+        let label = document.getElementById('month-label');
+        let months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+        label.innerText = months[month] + ' ' + year;
+        
+        let html = 'Mo Di Mi Do Fr Sa So'.split(' ').map(d => '<div class="weekday">' + d + '</div>').join('');
+        
+        let first = new Date(year, month, 1);
+        let last = new Date(year, month + 1, 0);
+        let start = first.getDay() === 0 ? 6 : first.getDay() - 1;
+        
+        for (let i = start - 1; i >= 0; i--) html += '<div class="day other-month">' + (new Date(year, month, 0).getDate() - i) + '</div>';
+        
+        let today = new Date();
+        for (let d = 1; d <= last.getDate(); d++) {
+            let ds = year + '-' + (month + 1) + '-' + d;
+            let isToday = today.getDate() === d && today.getMonth() === month && today.getFullYear() === year;
+            let has = breaks.filter(b => b.date === ds).length;
+            let cls = 'day' + (isToday ? ' today' : '') + (selectedDate === ds ? ' selected' : '') + (has > 0 ? ' has-booking' : '');
+            html += '<div class="' + cls + '" onclick="pickDate(\'' + ds + '\')">' + d + '</div>';
+        }
+        
+        for (let i = 1; i <= 42 - (start + last.getDate()); i++) html += '<div class="day other-month">' + i + '</div>';
+        
+        cal.innerHTML = html;
+    }
 
-        prevMonth: function() { 
-            this.currentMonth--; 
-            if (this.currentMonth < 0) { this.currentMonth = 11; this.currentYear--; } 
-            this.renderCalendar(); 
-        },
+    function pickDate(ds) {
+        selectedDate = ds;
+        drawCalendar();
+        showDay();
+    }
 
-        nextMonth: function() { 
-            this.currentMonth++; 
-            if (this.currentMonth > 11) { this.currentMonth = 0; this.currentYear++; } 
-            this.renderCalendar(); 
-        },
+    function showDay() {
+        let dayLabel = document.getElementById('day-label');
+        let parts = selectedDate.split('-');
+        let months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+        dayLabel.innerText = parts[2] + '. ' + months[month] + ' ' + year;
 
-        renderCalendar: function() {
-            const cal = document.getElementById('calendar');
-            const my = document.getElementById('month-year');
-            const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-            my.textContent = months[this.currentMonth] + ' ' + this.currentYear;
-            
-            let html = this.weekdays.map(w => '<div class="weekday">' + w + '</div>').join('');
-            
-            const first = new Date(this.currentYear, this.currentMonth, 1);
-            const last = new Date(this.currentYear, this.currentMonth + 1, 0);
-            const start = first.getDay() === 0 ? 6 : first.getDay() - 1;
-            const prevLast = new Date(this.currentYear, this.currentMonth, 0).getDate();
-            
-            for (let i = start - 1; i >= 0; i--) html += '<div class="day other-month">' + (prevLast - i) + '</div>';
-            
-            const today = new Date();
-            for (let d = 1; d <= last.getDate(); d++) {
-                const ds = this.currentYear + '-' + String(this.currentMonth + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-                const isToday = today.getDate() === d && today.getMonth() === this.currentMonth && today.getFullYear() === this.currentYear;
-                const dayBreaks = this.breaks.filter(b => b.date === ds);
-                let cls = dayBreaks.some(b => b.location === 'Keller') && dayBreaks.some(b => b.location === 'Küche') ? 'has-booking-both' : (dayBreaks.length > 0 ? 'has-booking' : '');
-                html += '<div class="day ' + (isToday ? 'today ' : '') + (this.selectedDate === ds ? 'selected ' : '') + cls + '" onclick="App.selectDate(\'' + ds + '\')">' + d + '</div>';
-            }
-            
-            for (let i = 1; i <= 42 - (start + last.getDate()); i++) html += '<div class="day other-month">' + i + '</div>';
-            cal.innerHTML = html;
-        },
+        renderBreaks();
 
-        selectDate: function(ds) { 
-            this.selectedDate = ds; 
-            this.renderCalendar(); 
-            this.updateDayView(); 
-        },
-
-        updateDayView: function() {
-            const parts = this.selectedDate.split('-');
-            const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-            document.getElementById('selected-day-display').textContent = parseInt(parts[2]) + '. ' + months[this.currentMonth] + ' ' + this.currentYear;
-            
-            this.renderBookings();
-            
-            const bf = document.getElementById('booking-form');
-            const mb = document.getElementById('my-booking');
-            
-            if (this.currentRole === 'employee') {
-                const myBreak = this.breaks.find(b => b.date === this.selectedDate && b.name === this.currentUser);
-                if (myBreak) {
-                    bf.classList.add('hidden');
-                    mb.classList.remove('hidden');
-                    const [h, m] = myBreak.time.split(':');
-                    document.getElementById('my-booking-info').textContent = myBreak.time + ' - ' + (parseInt(h) + 1) + ':' + m + ' Uhr - ' + myBreak.location;
-                } else {
-                    bf.classList.remove('hidden');
-                    mb.classList.add('hidden');
-                    this.resetLocationSelection();
-                    this.updateTimeSelect();
-                }
-            } else { 
-                bf.classList.add('hidden'); 
-                mb.classList.add('hidden'); 
-            }
-        },
-
-        renderBookings: function() {
-            const dayBreaks = this.breaks.filter(b => b.date === this.selectedDate).sort((a,b) => a.time.localeCompare(b.time));
-            const tbody = document.getElementById('bookings-body');
-            if (dayBreaks.length === 0) { 
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;">Keine Pausen</td></tr>'; 
+        let form = document.getElementById('form-div');
+        let my = document.getElementById('my-break');
+        
+        if (role === 'employee') {
+            let mine = breaks.find(b => b.date === selectedDate && b.name === user);
+            if (mine) {
+                form.className = 'booking-form hidden';
+                my.className = 'my-booking';
+                let [h, m] = mine.time.split(':');
+                document.getElementById('break-info').innerText = mine.time + ' - ' + (parseInt(h)+1) + ':' + m + ' Uhr, ' + mine.location;
             } else {
-                tbody.innerHTML = dayBreaks.map(b => {
-                    const [h, m] = b.time.split(':');
-                    return '<tr><td>' + b.time + ' - ' + (parseInt(h) + 1) + ':' + m + '</td><td class="location-' + b.location.toLowerCase() + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
-                }).join('');
-            }
-        },
-
-        selectLocation: function(loc) {
-            this.selectedLocation = loc;
-            document.querySelectorAll('.location-option').forEach(el => el.classList.remove('selected'));
-            if (loc === 'Keller') document.getElementById('loc-keller').classList.add('selected');
-            if (loc === 'Küche') document.getElementById('loc-kuche').classList.add('selected');
-        },
-
-        resetLocationSelection: function() { 
-            this.selectedLocation = null; 
-            document.querySelectorAll('.location-option').forEach(el => el.classList.remove('selected')); 
-        },
-
-        showMessage: function(msg, type) {
-            document.getElementById('message-container').innerHTML = '<div class="message ' + type + '">' + msg + '</div>';
-            setTimeout(() => document.getElementById('message-container').innerHTML = '', 3000);
-        },
-
-        bookBreak: async function() {
-            if (!this.selectedLocation) { this.showMessage('Bitte Ort wählen', 'error'); return; }
-            if (!this.db) { this.showMessage('Datenbank nicht geladen', 'error'); return; }
-            
-            const h = document.getElementById('break-hour').value;
-            const m = document.getElementById('break-minute').value;
-            const time = h + ':' + m;
-            
-            const atTime = this.breaks.filter(b => b.date === this.selectedDate && b.time === time);
-            if (atTime.length >= 2) { this.showMessage('Zeit voll besetzt', 'error'); return; }
-            if (atTime.map(b => b.location).includes(this.selectedLocation)) { this.showMessage('Ort bereits gebucht', 'error'); return; }
-            if (this.breaks.find(b => b.date === this.selectedDate && b.name === this.currentUser)) { this.showMessage('Bereits gebucht', 'error'); return; }
-            
-            try {
-                await this.db.collection('breaks').add({ 
-                    name: this.currentUser, 
-                    date: this.selectedDate, 
-                    time: time, 
-                    location: this.selectedLocation 
-                });
-                
-                this.showMessage('✓ Pause gebucht: ' + time + ' - ' + this.selectedLocation, 'success');
-                
-                await this.loadBreaks();
-                this.renderCalendar();
-                this.updateDayView();
-            } catch(e) { 
-                console.error(e); 
-                this.showMessage('Fehler: ' + e.message, 'error'); 
-            }
-        },
-
-        cancelMyBreak: async function() {
-            const myBreak = this.breaks.find(b => b.date === this.selectedDate && b.name === this.currentUser);
-            if (!myBreak || !this.db) return;
-            
-            try {
-                await this.db.collection('breaks').doc(myBreak.id).delete();
-                this.showMessage('✓ Storniert', 'success');
-                await this.loadBreaks();
-                this.renderCalendar();
-                this.updateDayView();
-            } catch(e) { 
-                console.error(e); 
-                this.showMessage('Fehler: ' + e.message, 'error'); 
-            }
-        },
-
-        loadBreaks: async function() {
-            if (!this.db) return;
-            
-            try {
-                const snap = await this.db.collection('breaks').orderBy('date').orderBy('time').get();
-                this.breaks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                console.log('Loaded breaks:', this.breaks.length);
-            } catch(e) {
-                console.error('Load error:', e);
-                this.breaks = [];
+                form.className = 'booking-form';
+                my.className = 'my-booking hidden';
+                document.querySelectorAll('.location-option').forEach(el => el.className = 'location-option');
+                selectedLocation = null;
             }
         }
-    };
+    }
 
-    // Wait for firebase, then init
-    window.onload = function() {
-        if (window.firebase) {
-            App.init();
+    function renderBreaks() {
+        let list = document.getElementById('breaks-list');
+        let dayBreaks = breaks.filter(b => b.date === selectedDate).sort((a,b) => a.time.localeCompare(b.time));
+        
+        if (dayBreaks.length === 0) {
+            list.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;">Keine Pausen</td></tr>';
         } else {
-            // Wait for firebase to load
-            setTimeout(() => App.init(), 500);
+            list.innerHTML = dayBreaks.map(b => {
+                let [h, m] = b.time.split(':');
+                return '<tr><td>' + b.time + ' - ' + (parseInt(h)+1) + ':' + m + '</td><td class="location-' + b.location.toLowerCase().replace('ü','u') + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
+            }).join('');
         }
-    };
-    </script>
+    }
 
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    function pickLocation(loc) {
+        selectedLocation = loc;
+        document.getElementById('opt-keller').className = loc === 'Keller' ? 'location-option selected' : 'location-option';
+        document.getElementById('opt-kuche').className = loc === 'Küche' ? 'location-option selected' : 'location-option';
+    }
+
+    function showMessage(msg, type) {
+        document.getElementById('message').innerHTML = '<div class="message ' + type + '">' + msg + '</div>';
+        setTimeout(() => document.getElementById('message').innerHTML = '', 3000);
+    }
+
+    async function doBook() {
+        if (!selectedLocation) return showMessage('Bitte Ort wählen', 'error');
+        
+        let h = document.getElementById('hour-select').value;
+        let m = document.getElementById('min-select').value;
+        let time = h + ':' + m;
+        
+        let atTime = breaks.filter(b => b.date === selectedDate && b.time === time);
+        if (atTime.length >= 2) return showMessage('Zeit voll besetzt', 'error');
+        if (atTime.map(b => b.location).includes(selectedLocation)) return showMessage('Ort bereits gebucht', 'error');
+        if (breaks.find(b => b.date === selectedDate && b.name === user)) return showMessage('Bereits gebucht', 'error');
+        
+        await db.collection('breaks').add({ name: user, date: selectedDate, time: time, location: selectedLocation });
+        
+        showMessage('✓ Gebucht: ' + time + ', ' + selectedLocation, 'success');
+        
+        await loadBreaks();
+        drawCalendar();
+        showDay();
+    }
+
+    async function doCancel() {
+        let mine = breaks.find(b => b.date === selectedDate && b.name === user);
+        if (mine) {
+            await db.collection('breaks').doc(mine.id).delete();
+            showMessage('✓ Storniert', 'success');
+            await loadBreaks();
+            drawCalendar();
+            showDay();
+        }
+    }
+
+    async function loadBreaks() {
+        let snap = await db.collection('breaks').get();
+        breaks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    // Start
+    selectRole('employee');
+    drawCalendar();
+    </script>
 </body>
 </html>

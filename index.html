@@ -87,6 +87,13 @@
             border-radius: 4px;
             font-size: 1rem;
             margin-bottom: 1rem;
+            background: white;
+            color: var(--text);
+            min-height: 44px;
+        }
+
+        select option {
+            padding: 0.5rem;
         }
 
         label {
@@ -353,9 +360,10 @@
                 <div id="booking-form" class="booking-form hidden">
                     <h3>Pause buchen</h3>
                     <label>Uhrzeit:</label>
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                        <select id="break-hour" style="flex: 1;"></select>
-                        <select id="break-minute" style="flex: 1;"></select>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <select id="break-hour" style="flex: 1; min-width: 80px;"></select>
+                        <span style="align-self: center;">:</span>
+                        <select id="break-minute" style="flex: 1; min-width: 80px;"></select>
                     </div>
                     
                     <label>Ort:</label>

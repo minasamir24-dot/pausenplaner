@@ -35,19 +35,19 @@
         .day.selected { background: var(--primary); color: white; }
         .day.today { border: 2px solid var(--primary); }
         .day.other-month { color: #ccc; }
+        .day.has-booking::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; background:var(--kitchen); }
         .booking-form { border-top: 1px solid #eee; padding-top: 1rem; margin-top: 1rem; }
         .location-options { display: flex; gap: 1rem; margin-bottom: 1rem; }
         .location-option { flex: 1; padding: 1rem; border: 2px solid #ddd; border-radius: 4px; cursor: pointer; text-align: center; }
-        .location-option.selected { border-color: var(--primary); background: rgba(46,125,50,0.1); background: #e8f5e9; }
+        .location-option.selected { border-color: var(--primary); background: #e8f5e9; }
         .bookings-table { width: 100%; border-collapse: collapse; }
         .bookings-table th, .bookings-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
         .location-keller { color: var(--basement); font-weight: 500; }
-        .location-küche { color: var(--kitchen); font-weight: 500; }
+        .location-kuche { color: var(--kitchen); font-weight: 500; }
         .message { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; }
         .message.error { background: #ffebee; color: var(--error); }
         .message.success { background: #e8f5e9; color: var(--success); }
         .my-booking { background: #e8f5e9; border-radius: 4px; padding: 1rem; margin-bottom: 1rem; }
-        .my-booking h3 { color: var(--success); }
     </style>
 </head>
 <body>
@@ -101,7 +101,7 @@
                     <select id="min-select"></select>
                     <div class="location-options">
                         <div class="location-option" id="opt-keller" onclick="pickLocation('Keller')">Keller</div>
-                        <div class="location-option" id="opt-kuche" onclick="pickLocation('Küche')">Küche</div>
+                        <div class="location-option" id="opt-kuche" onclick="pickLocation('Kueche')">Küche</div>
                     </div>
                     <button class="btn btn-primary" onclick="doBook()">Buchen</button>
                 </div>
@@ -120,117 +120,97 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     
     <script>
-    // ===== CONFIG =====
-    const config = {
+    firebase.initializeApp({
         apiKey: "AIzaSyBS3pWs4nm_hmaAGCvuaHTKxlppWgb4-2Q",
         authDomain: "pausenplanner.firebaseapp.com",
         projectId: "pausenplanner",
         storageBucket: "pausenplanner.firebasestorage.app",
         messagingSenderId: "142766491427",
         appId: "1:142766491427:web:be22d6087c1ebcb85d2e96"
-    };
+    });
+    const db = firebase.firestore();
 
-    // ===== STATE =====
-    let db, user, role = 'employee', month = new Date().getMonth(), year = new Date().getFullYear();
+    let user, role = 'employee', month = new Date().getMonth(), year = new Date().getFullYear();
     let selectedDate, selectedLocation, breaks = [];
 
-    // ===== INIT =====
-    firebase.initializeApp(config);
-    db = firebase.firestore();
-    console.log("Firebase ready");
-
-    // ===== FUNCTIONS =====
-    function selectRole(r) { 
+    window.selectRole = function(r) { 
         role = r;
         document.getElementById('btn-mitarbeiter').className = r === 'employee' ? 'role-option selected' : 'role-option';
         document.getElementById('btn-leiter').className = r === 'manager' ? 'role-option selected' : 'role-option';
         document.getElementById('name-div').style.display = r === 'employee' ? 'block' : 'none';
-    }
+    };
 
-    function doLogin() {
+    window.doLogin = function() {
         let name = document.getElementById('input-name').value.trim();
         if (role === 'employee' && !name) return alert('Bitte Namen eingeben');
         user = role === 'manager' ? 'Leiter' : name;
-        
         document.getElementById('login-view').className = 'hidden';
         document.getElementById('app-view').className = '';
-        
         document.getElementById('welcome').innerText = 'Hallo, ' + user + '!';
         document.getElementById('badge').innerText = role === 'manager' ? 'Leiter' : 'Mitarbeiter';
         document.getElementById('badge').className = 'badge ' + (role === 'manager' ? 'badge-manager' : 'badge-employee');
-        
         loadBreaks();
         drawCalendar();
         fillTimeSelect();
-    }
+    };
 
-    function doLogout() {
+    window.doLogout = function() {
         user = null;
         selectedDate = null;
         document.getElementById('app-view').className = 'hidden';
         document.getElementById('login-view').className = '';
-    }
+    };
 
-    function fillTimeSelect() {
+    window.fillTimeSelect = function() {
         let hs = document.getElementById('hour-select');
         let ms = document.getElementById('min-select');
         hs.innerHTML = ''; ms.innerHTML = '';
         for (let h = 8; h <= 17; h++) hs.innerHTML += '<option value="' + h + '">' + h + ' Uhr</option>';
         ['00','05','10','15','20','25','30','35','40','45','50','55'].forEach(m => ms.innerHTML += '<option value="' + m + '">' + m + '</option>');
-    }
+    };
 
-    function changeMonth(delta) {
+    window.changeMonth = function(delta) {
         month += delta;
         if (month > 11) { month = 0; year++; }
         if (month < 0) { month = 11; year--; }
         drawCalendar();
-    }
+    };
 
-    function drawCalendar() {
+    window.drawCalendar = function() {
         let cal = document.getElementById('calendar');
         let label = document.getElementById('month-label');
         let months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
         label.innerText = months[month] + ' ' + year;
-        
         let html = 'Mo Di Mi Do Fr Sa So'.split(' ').map(d => '<div class="weekday">' + d + '</div>').join('');
-        
         let first = new Date(year, month, 1);
         let last = new Date(year, month + 1, 0);
         let start = first.getDay() === 0 ? 6 : first.getDay() - 1;
-        
         for (let i = start - 1; i >= 0; i--) html += '<div class="day other-month">' + (new Date(year, month, 0).getDate() - i) + '</div>';
-        
         let today = new Date();
         for (let d = 1; d <= last.getDate(); d++) {
             let ds = year + '-' + (month + 1) + '-' + d;
             let isToday = today.getDate() === d && today.getMonth() === month && today.getFullYear() === year;
             let has = breaks.filter(b => b.date === ds).length;
             let cls = 'day' + (isToday ? ' today' : '') + (selectedDate === ds ? ' selected' : '') + (has > 0 ? ' has-booking' : '');
-            html += '<div class="' + cls + '" onclick="pickDate(\'' + ds + '\')">' + d + '</div>';
+            html += '<div class="' + cls + '" onclick="pickDate(' + d + ')">' + d + '</div>';
         }
-        
         for (let i = 1; i <= 42 - (start + last.getDate()); i++) html += '<div class="day other-month">' + i + '</div>';
-        
         cal.innerHTML = html;
-    }
+    };
 
-    function pickDate(ds) {
-        selectedDate = ds;
+    window.pickDate = function(d) {
+        selectedDate = year + '-' + (month + 1) + '-' + d;
         drawCalendar();
         showDay();
-    }
+    };
 
-    function showDay() {
+    window.showDay = function() {
         let dayLabel = document.getElementById('day-label');
-        let parts = selectedDate.split('-');
         let months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-        dayLabel.innerText = parts[2] + '. ' + months[month] + ' ' + year;
-
+        dayLabel.innerText = selectedDate.split('-')[2] + '. ' + months[month] + ' ' + year;
         renderBreaks();
-
         let form = document.getElementById('form-div');
         let my = document.getElementById('my-break');
-        
         if (role === 'employee') {
             let mine = breaks.find(b => b.date === selectedDate && b.name === user);
             if (mine) {
@@ -245,55 +225,51 @@
                 selectedLocation = null;
             }
         }
-    }
+    };
 
-    function renderBreaks() {
+    window.renderBreaks = function() {
         let list = document.getElementById('breaks-list');
         let dayBreaks = breaks.filter(b => b.date === selectedDate).sort((a,b) => a.time.localeCompare(b.time));
-        
         if (dayBreaks.length === 0) {
             list.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;">Keine Pausen</td></tr>';
         } else {
             list.innerHTML = dayBreaks.map(b => {
                 let [h, m] = b.time.split(':');
-                return '<tr><td>' + b.time + ' - ' + (parseInt(h)+1) + ':' + m + '</td><td class="location-' + b.location.toLowerCase().replace('ü','u') + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
+                let locClass = b.location === 'Keller' ? 'location-keller' : 'location-kuche';
+                return '<tr><td>' + b.time + ' - ' + (parseInt(h)+1) + ':' + m + '</td><td class="' + locClass + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
             }).join('');
         }
-    }
+    };
 
-    function pickLocation(loc) {
+    window.pickLocation = function(loc) {
         selectedLocation = loc;
         document.getElementById('opt-keller').className = loc === 'Keller' ? 'location-option selected' : 'location-option';
-        document.getElementById('opt-kuche').className = loc === 'Küche' ? 'location-option selected' : 'location-option';
-    }
+        document.getElementById('opt-kuche').className = loc === 'Kueche' ? 'location-option selected' : 'location-option';
+    };
 
-    function showMessage(msg, type) {
+    window.showMessage = function(msg, type) {
         document.getElementById('message').innerHTML = '<div class="message ' + type + '">' + msg + '</div>';
         setTimeout(() => document.getElementById('message').innerHTML = '', 3000);
-    }
+    };
 
-    async function doBook() {
+    window.doBook = async function() {
         if (!selectedLocation) return showMessage('Bitte Ort wählen', 'error');
-        
         let h = document.getElementById('hour-select').value;
         let m = document.getElementById('min-select').value;
         let time = h + ':' + m;
-        
         let atTime = breaks.filter(b => b.date === selectedDate && b.time === time);
         if (atTime.length >= 2) return showMessage('Zeit voll besetzt', 'error');
         if (atTime.map(b => b.location).includes(selectedLocation)) return showMessage('Ort bereits gebucht', 'error');
         if (breaks.find(b => b.date === selectedDate && b.name === user)) return showMessage('Bereits gebucht', 'error');
         
         await db.collection('breaks').add({ name: user, date: selectedDate, time: time, location: selectedLocation });
-        
         showMessage('✓ Gebucht: ' + time + ', ' + selectedLocation, 'success');
-        
         await loadBreaks();
         drawCalendar();
         showDay();
-    }
+    };
 
-    async function doCancel() {
+    window.doCancel = async function() {
         let mine = breaks.find(b => b.date === selectedDate && b.name === user);
         if (mine) {
             await db.collection('breaks').doc(mine.id).delete();
@@ -302,14 +278,14 @@
             drawCalendar();
             showDay();
         }
-    }
+    };
 
     async function loadBreaks() {
         let snap = await db.collection('breaks').get();
         breaks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
 
-    // Start
+    // Init
     selectRole('employee');
     drawCalendar();
     </script>

@@ -397,8 +397,16 @@
             measurementId: "G-FB7LYGTGMX"
         };
 
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        let app, db;
+        
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log("Firebase initialized successfully");
+        } catch(e) {
+            console.error("Firebase init error:", e);
+            alert("Error loading Firebase: " + e.message);
+        }
         
         let currentUser = null;
         let currentRole = 'employee';
@@ -678,26 +686,38 @@
                 return;
             }
             
-            await db.collection("breaks").add({
-                name: currentUser,
-                date: selectedDate,
-                time: time,
-                location: selectedLocation
-            });
-            
-            showMessage('Pause erfolgreich gebucht!', 'success');
+            try {
+                await db.collection("breaks").add({
+                    name: currentUser,
+                    date: selectedDate,
+                    time: time,
+                    location: selectedLocation
+                });
+                
+                showMessage('Pause erfolgreich gebucht!', 'success');
+            } catch(e) {
+                console.error("Booking error:", e);
+                showMessage('Fehler beim Buchen: ' + e.message, 'error');
+            }
         }
 
         window.cancelMyBreak = async function() {
             const myBreak = breaks.find(b => b.date === selectedDate && b.name === currentUser);
             
             if (myBreak) {
+try {
                 await db.collection("breaks").doc(myBreak.id).delete();
                 showMessage('Pause erfolgreich storniert.', 'success');
+            } catch(e) {
+                console.error("Cancel error:", e);
+                showMessage('Fehler beim Stornieren: ' + e.message, 'error');
             }
         }
 
-renderCalendar();
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("App loaded, firebase:", typeof firebase);
+            renderCalendar();
+        });
     </script>
 </body>
 </html>

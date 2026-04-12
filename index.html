@@ -5,17 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pausenplaner - Apotheke</title>
     <style>
-        :root {
-            --primary: #2E7D32;
-            --secondary: #1565C0;
-            --bg: #F5F5F5;
-            --card: #FFFFFF;
-            --text: #212121;
-            --kitchen: #FFA726;
-            --basement: #5C6BC0;
-            --error: #D32F2F;
-            --success: #388E3C;
-        }
+        :root { --primary: #2E7D32; --secondary: #1565C0; --bg: #F5F5F5; --card: #FFFFFF; --text: #212121; --kitchen: #FFA726; --basement: #5C6BC0; --error: #D32F2F; --success: #388E3C; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 1rem; }
         .container { max-width: 600px; margin: 0 auto; }
@@ -26,7 +16,7 @@
         .btn-primary { background: var(--primary); color: white; }
         .btn-danger { background: var(--error); color: white; }
         .btn-secondary { background: var(--secondary); color: white; }
-        input, select { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; margin-bottom: 1rem; background: white; color: var(--text); }
+        input, select { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; margin-bottom: 1rem; }
         label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
         .role-select { display: flex; gap: 1rem; margin-bottom: 1rem; }
         .role-option { flex: 1; padding: 1rem; border: 2px solid #ddd; border-radius: 4px; cursor: pointer; text-align: center; }
@@ -52,8 +42,6 @@
         .location-options { display: flex; gap: 1rem; margin-bottom: 1rem; }
         .location-option { flex: 1; padding: 1rem; border: 2px solid #ddd; border-radius: 4px; cursor: pointer; text-align: center; }
         .location-option.selected { border-color: var(--primary); background: rgba(46,125,50,0.1); }
-        .location-option.keller.selected { border-color: var(--basement); background: rgba(92,107,192,0.1); }
-        .location-option.küche.selected { border-color: var(--kitchen); background: rgba(255,167,38,0.1); }
         .bookings-table { width: 100%; border-collapse: collapse; }
         .bookings-table th, .bookings-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
         .bookings-table th { background: #f9f9f9; font-weight: 600; }
@@ -70,7 +58,10 @@
 <body>
     <div class="container">
         <h1>Pausenplaner</h1>
-        <div id="login-view">
+        <div id="loading" class="card" style="text-align:center;">
+            <p>Firebase wird geladen...</p>
+        </div>
+        <div id="login-view" class="hidden">
             <div class="card">
                 <h2>Anmeldung</h2>
                 <div class="role-select">
@@ -128,15 +119,11 @@
                 </div>
             </div>
         </div>
-        <div id="loading" class="card" style="text-align:center;">
-            <p>Laden...</p>
-        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <script>
-    (function() {
         const firebaseConfig = {
             apiKey: "AIzaSyBS3pWs4nm_hmaAGCvuaHTKxlppWgb4-2Q",
             authDomain: "pausenplanner.firebaseapp.com",
@@ -146,13 +133,19 @@
             appId: "1:142766491427:web:be22d6087c1ebcb85d2e96"
         };
 
-        let app, db;
-        let currentUser, currentRole = 'employee';
+        let app, db, currentUser, currentRole = 'employee';
         let currentMonth = new Date().getMonth();
         let currentYear = new Date().getFullYear();
         let selectedDate, selectedLocation;
         let breaks = [];
         const weekdays = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+        // Initialize Firebase
+        app = firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        document.getElementById('loading').style.display = 'none';
+        console.log('Firebase initialized');
+        renderCalendar();
 
         window.selectRole = function(role) {
             currentRole = role;
@@ -185,8 +178,8 @@
         function updateWelcome() {
             document.getElementById('welcome-msg').textContent = 'Hallo, ' + currentUser + '!';
             const badge = document.getElementById('role-badge');
-            if (currentRole === 'manager') { badge.textContent = 'Leiter'; badge.className = 'badge badge-manager'; }
-            else { badge.textContent = 'Mitarbeiter'; badge.className = 'badge badge-employee'; }
+            badge.textContent = currentRole === 'manager' ? 'Leiter' : 'Mitarbeiter';
+            badge.className = 'badge ' + (currentRole === 'manager' ? 'badge-manager' : 'badge-employee');
         }
 
         window.updateTimeSelect = function() {
@@ -194,8 +187,7 @@
             const ms = document.getElementById('break-minute');
             hs.innerHTML = ''; ms.innerHTML = '';
             for (let h = 8; h <= 17; h++) hs.innerHTML += '<option value="' + h + '">' + h + ' Uhr</option>';
-            const mins = ['00','05','10','15','20','25','30','35','40','45','50','55'];
-            mins.forEach(m => ms.innerHTML += '<option value="' + m + '">' + m + '</option>');
+            ['00','05','10','15','20','25','30','35','40','45','50','55'].forEach(m => ms.innerHTML += '<option value="' + m + '">' + m + '</option>');
         };
 
         window.prevMonth = function() { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(); };
@@ -216,17 +208,11 @@
             for (let d = 1; d <= last.getDate(); d++) {
                 const ds = currentYear + '-' + String(currentMonth + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
                 const isToday = today.getDate() === d && today.getMonth() === currentMonth && today.getFullYear() === currentYear;
-                const isSel = selectedDate === ds;
                 const dayBreaks = breaks.filter(b => b.date === ds);
-                const hasK = dayBreaks.some(b => b.location === 'Keller');
-                const hasKü = dayBreaks.some(b => b.location === 'Küche');
-                let cls = '';
-                if (hasK && hasKü) cls = 'has-booking-both';
-                else if (hasK || hasKü) cls = 'has-booking';
-                html += '<div class="day ' + (isToday ? 'today ' : '') + (isSel ? 'selected ' : '') + cls + '" onclick="selectDate(\'' + ds + '\')">' + d + '</div>';
+                let cls = dayBreaks.some(b => b.location === 'Keller') && dayBreaks.some(b => b.location === 'Küche') ? 'has-booking-both' : (dayBreaks.length > 0 ? 'has-booking' : '');
+                html += '<div class="day ' + (isToday ? 'today ' : '') + (selectedDate === ds ? 'selected ' : '') + cls + '" onclick="selectDate(\'' + ds + '\')">' + d + '</div>';
             }
-            const remain = 42 - (start + last.getDate());
-            for (let i = 1; i <= remain; i++) html += '<div class="day other-month">' + i + '</div>';
+            for (let i = 1; i <= 42 - (start + last.getDate()); i++) html += '<div class="day other-month">' + i + '</div>';
             cal.innerHTML = html;
         };
 
@@ -234,9 +220,8 @@
 
         window.updateDayView = function() {
             const parts = selectedDate.split('-');
-            const day = parseInt(parts[2]);
             const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-            document.getElementById('selected-day-display').textContent = day + '. ' + months[currentMonth] + ' ' + currentYear;
+            document.getElementById('selected-day-display').textContent = parseInt(parts[2]) + '. ' + months[currentMonth] + ' ' + currentYear;
             renderBookings();
             const bf = document.getElementById('booking-form');
             const mb = document.getElementById('my-booking');
@@ -246,8 +231,7 @@
                     bf.classList.add('hidden');
                     mb.classList.remove('hidden');
                     const [h, m] = myBreak.time.split(':');
-                    const eh = String(parseInt(h) + 1).padStart(2,'0');
-                    document.getElementById('my-booking-info').textContent = myBreak.time + ' - ' + eh + ':' + m + ' Uhr - ' + myBreak.location;
+                    document.getElementById('my-booking-info').textContent = myBreak.time + ' - ' + (parseInt(h) + 1) + ':' + m + ' Uhr - ' + myBreak.location;
                 } else {
                     bf.classList.remove('hidden');
                     mb.classList.add('hidden');
@@ -260,12 +244,11 @@
         window.renderBookings = function() {
             const dayBreaks = breaks.filter(b => b.date === selectedDate).sort((a,b) => a.time.localeCompare(b.time));
             const tbody = document.getElementById('bookings-body');
-            if (dayBreaks.length === 0) tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;">Keine Pausen</td></tr>';
+            if (dayBreaks.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;">Keine Pausen</td></tr>'; }
             else {
                 tbody.innerHTML = dayBreaks.map(b => {
                     const [h, m] = b.time.split(':');
-                    const eh = String(parseInt(h) + 1).padStart(2,'0');
-                    return '<tr><td>' + b.time + ' - ' + eh + ':' + m + '</td><td class="location-' + b.location.toLowerCase() + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
+                    return '<tr><td>' + b.time + ' - ' + (parseInt(h) + 1) + ':' + m + '</td><td class="location-' + b.location.toLowerCase() + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
                 }).join('');
             }
         };
@@ -292,19 +275,21 @@
             if (atTime.length >= 2) { showMessage('Zeit voll besetzt', 'error'); return; }
             if (atTime.map(b => b.location).includes(selectedLocation)) { showMessage('Ort bereits gebucht', 'error'); return; }
             if (breaks.find(b => b.date === selectedDate && b.name === currentUser)) { showMessage('Bereits gebucht', 'error'); return; }
-            try {
-                await db.collection('breaks').add({ name: currentUser, date: selectedDate, time: time, location: selectedLocation });
-                showMessage('Erfolgreich gebucht!', 'success');
-            } catch(e) { console.error(e); showMessage('Fehler: ' + e.message, 'error'); }
+            await db.collection('breaks').add({ name: currentUser, date: selectedDate, time: time, location: selectedLocation });
+            showMessage('Erfolgreich gebucht!', 'success');
+            await loadBreaks();
+            renderCalendar();
+            updateDayView();
         };
 
         window.cancelMyBreak = async function() {
             const myBreak = breaks.find(b => b.date === selectedDate && b.name === currentUser);
             if (myBreak) {
-                try {
-                    await db.collection('breaks').doc(myBreak.id).delete();
-                    showMessage('Erfolgreich storniert!', 'success');
-                } catch(e) { console.error(e); showMessage('Fehler: ' + e.message, 'error'); }
+                await db.collection('breaks').doc(myBreak.id).delete();
+                showMessage('Erfolgreich storniert!', 'success');
+                await loadBreaks();
+                renderCalendar();
+                updateDayView();
             }
         };
 
@@ -312,19 +297,6 @@
             const snap = await db.collection('breaks').orderBy('date').orderBy('time').get();
             breaks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
-
-        // Initialize
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            document.getElementById('loading').classList.add('hidden');
-            renderCalendar();
-            console.log('Firebase OK');
-        } catch(e) {
-            console.error('Init error:', e);
-            document.getElementById('loading').innerHTML = '<p style="color:red;">Fehler: ' + e.message + '</p>';
-        }
-    })();
     </script>
 </body>
 </html>

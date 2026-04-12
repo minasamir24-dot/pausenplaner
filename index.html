@@ -292,17 +292,17 @@
 </head>
 <body>
     <div class="container">
-        <h1>🏥 Pausenplaner</h1>
+        <h1>Pausenplaner</h1>
         
         <div id="login-view">
             <div class="card">
                 <h2>Anmeldung</h2>
                 <div class="role-select">
                     <div class="role-option employee selected" onclick="selectRole('employee')">
-                        👨‍⚕️ Mitarbeiter
+                        Mitarbeiter
                     </div>
                     <div class="role-option manager" onclick="selectRole('manager')">
-                        👩‍💼 Leiter
+                        Leiter
                     </div>
                 </div>
                 <div id="name-input-container">
@@ -326,15 +326,15 @@
 
             <div class="card">
                 <div class="calendar-nav">
-                    <button class="btn btn-primary" style="width: auto;" onclick="prevMonth()">◀</button>
+                    <button class="btn btn-primary" style="width: auto;" onclick="prevMonth()">&lt;</button>
                     <span id="month-year" style="font-weight: bold;"></span>
-                    <button class="btn btn-primary" style="width: auto;" onclick="nextMonth()">▶</button>
+                    <button class="btn btn-primary" style="width: auto;" onclick="nextMonth()">&gt;</button>
                 </div>
                 <div class="calendar-grid" id="calendar"></div>
             </div>
 
             <div class="card">
-                <h2>📋 Pausen für <span id="selected-day-display"></span></h2>
+                <h2>Pausen <span id="selected-day-display"></span></h2>
                 <div id="message-container"></div>
                 
                 <div id="bookings-container">
@@ -360,15 +360,15 @@
                     
                     <label>Ort:</label>
                     <div class="location-options">
-                        <div class="location-option keller" onclick="selectLocation('Keller')">🏠 Keller</div>
-                        <div class="location-option küche" onclick="selectLocation('Küche')">🍳 Küche</div>
+                        <div class="location-option keller" onclick="selectLocation('Keller')">Keller</div>
+                        <div class="location-option küche" onclick="selectLocation('Küche')">Küche</div>
                     </div>
                     
                     <button class="btn btn-primary" onclick="bookBreak()">Pause buchen</button>
                 </div>
 
                 <div id="my-booking" class="my-booking hidden">
-                    <h3>✓ Ihre Pause</h3>
+                    <h3>Ihre Pause</h3>
                     <p id="my-booking-info"></p>
                     <button class="btn btn-danger" style="margin-top: 0.5rem;" onclick="cancelMyBreak()">Stornieren</button>
                 </div>
@@ -376,27 +376,58 @@
         </div>
     </div>
 
-    <script>
-        const STORAGE_KEY = 'pausenplaner_breaks';
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBS3pWs4nm_hmaAGCvuaHTKxlppWgb4-2Q",
+            authDomain: "pausenplanner.firebaseapp.com",
+            projectId: "pausenplanner",
+            storageBucket: "pausenplanner.firebasestorage.app",
+            messagingSenderId: "142766491427",
+            appId: "1:142766491427:web:be22d6087c1ebcb85d2e96",
+            measurementId: "G-FB7LYGTGMX"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
         let currentUser = null;
         let currentRole = 'employee';
         let currentMonth = new Date().getMonth();
         let currentYear = new Date().getFullYear();
         let selectedDate = null;
         let selectedLocation = null;
+        let breaks = [];
+        let unsubscribe = null;
 
         const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
-        function getBreaks() {
-            const data = localStorage.getItem(STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
+        async function loadBreaks() {
+            const q = query(collection(db, "breaks"), orderBy("date"), orderBy("time"));
+            const snapshot = await getDocs(q);
+            breaks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (selectedDate) {
+                renderCalendar();
+                updateDayView();
+            }
         }
 
-        function saveBreaks(breaks) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(breaks));
+        function subscribeToBreaks() {
+            const q = query(collection(db, "breaks"), orderBy("date"), orderBy("time"));
+            unsubscribe = onSnapshot(q, (snapshot) => {
+                breaks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (selectedDate) {
+                    renderCalendar();
+                    updateDayView();
+                } else {
+                    renderCalendar();
+                }
+            });
         }
 
-        function selectRole(role) {
+        window.selectRole = function(role) {
             currentRole = role;
             document.querySelectorAll('.role-option').forEach(el => el.classList.remove('selected'));
             document.querySelector(`.role-option.${role}`).classList.add('selected');
@@ -405,7 +436,7 @@
             nameContainer.classList.toggle('hidden', role === 'manager');
         }
 
-        function login() {
+        window.login = async function() {
             const nameInput = document.getElementById('employee-name');
             const name = nameInput.value.trim();
             
@@ -420,14 +451,20 @@
             document.getElementById('app-view').classList.remove('hidden');
             
             updateWelcome();
+            await loadBreaks();
+            subscribeToBreaks();
             renderCalendar();
             updateTimeSelect();
         }
 
-        function logout() {
+        window.logout = function() {
             currentUser = null;
             selectedDate = null;
             selectedLocation = null;
+            if (unsubscribe) {
+                unsubscribe();
+                unsubscribe = null;
+            }
             document.getElementById('app-view').classList.add('hidden');
             document.getElementById('login-view').classList.remove('hidden');
             document.getElementById('employee-name').value = '';
@@ -445,7 +482,7 @@
             }
         }
 
-        function updateTimeSelect() {
+        window.updateTimeSelect = function() {
             const hourSelect = document.getElementById('break-hour');
             const minuteSelect = document.getElementById('break-minute');
             
@@ -457,7 +494,7 @@
             minuteSelect.innerHTML = '<option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option>';
         }
 
-        function prevMonth() {
+        window.prevMonth = function() {
             currentMonth--;
             if (currentMonth < 0) {
                 currentMonth = 11;
@@ -466,7 +503,7 @@
             renderCalendar();
         }
 
-        function nextMonth() {
+        window.nextMonth = function() {
             currentMonth++;
             if (currentMonth > 11) {
                 currentMonth = 0;
@@ -475,7 +512,7 @@
             renderCalendar();
         }
 
-        function renderCalendar() {
+        window.renderCalendar = function() {
             const calendar = document.getElementById('calendar');
             const monthYear = document.getElementById('month-year');
             
@@ -495,7 +532,6 @@
             }
             
             const today = new Date();
-            const breaks = getBreaks();
             
             for (let d = 1; d <= lastDay.getDate(); d++) {
                 const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -520,13 +556,13 @@
             calendar.innerHTML = html;
         }
 
-        function selectDate(dateStr) {
+        window.selectDate = function(dateStr) {
             selectedDate = dateStr;
             renderCalendar();
             updateDayView();
         }
 
-        function updateDayView() {
+        window.updateDayView = function() {
             const display = document.getElementById('selected-day-display');
             const parts = selectedDate.split('-');
             const day = parseInt(parts[2]);
@@ -540,7 +576,6 @@
             const myBooking = document.getElementById('my-booking');
             
             if (currentRole === 'employee') {
-                const breaks = getBreaks();
                 const myBreak = breaks.find(b => b.date === selectedDate && b.name === currentUser);
                 
                 if (myBreak) {
@@ -550,7 +585,7 @@
                     const endH = h + 1;
                     const endTime = `${endH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
                     document.getElementById('my-booking-info').textContent = 
-                        `${myBreak.time} - ${endTime} Uhr - ${myBreak.location === 'Keller' ? '🏠 Keller' : '🍳 Küche'}`;
+                        `${myBreak.time} - ${endTime} Uhr - ${myBreak.location}`;
                 } else {
                     bookingForm.classList.remove('hidden');
                     myBooking.classList.add('hidden');
@@ -562,8 +597,7 @@
             }
         }
 
-        function renderBookings() {
-            const breaks = getBreaks();
+        window.renderBookings = function() {
             const dayBreaks = breaks.filter(b => b.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time));
             
             const tbody = document.getElementById('bookings-body');
@@ -577,7 +611,7 @@
                     return `
                         <tr>
                             <td>${b.time} - ${endTime}</td>
-                            <td class="location-${b.location.toLowerCase()}">${b.location === 'Keller' ? '🏠 Keller' : '🍳 Küche'}</td>
+                            <td class="location-${b.location.toLowerCase()}">${b.location}</td>
                             <td>${b.name}</td>
                         </tr>
                     `;
@@ -585,13 +619,13 @@
             }
         }
 
-        function selectLocation(location) {
+        window.selectLocation = function(location) {
             selectedLocation = location;
             document.querySelectorAll('.location-option').forEach(el => el.classList.remove('selected'));
             document.querySelector(`.location-option.${location.toLowerCase()}`).classList.add('selected');
         }
 
-        function resetLocationSelection() {
+        window.resetLocationSelection = function() {
             selectedLocation = null;
             document.querySelectorAll('.location-option').forEach(el => el.classList.remove('selected'));
         }
@@ -602,7 +636,7 @@
             setTimeout(() => container.innerHTML = '', 3000);
         }
 
-        function bookBreak() {
+        window.bookBreak = async function() {
             if (!selectedLocation) {
                 showMessage('Bitte wählen Sie einen Ort aus.', 'error');
                 return;
@@ -611,7 +645,6 @@
             const hour = document.getElementById('break-hour').value;
             const minute = document.getElementById('break-minute').value;
             const time = `${hour}:${minute}`;
-            const breaks = getBreaks();
             
             const existingAtTime = breaks.filter(b => b.date === selectedDate && b.time === time);
             if (existingAtTime.length >= 2) {
@@ -631,32 +664,22 @@
                 return;
             }
             
-            const newBreak = {
-                id: Date.now().toString(),
+            await addDoc(collection(db, "breaks"), {
                 name: currentUser,
                 date: selectedDate,
                 time: time,
                 location: selectedLocation
-            };
-            
-            breaks.push(newBreak);
-            saveBreaks(breaks);
+            });
             
             showMessage('Pause erfolgreich gebucht!', 'success');
-            renderCalendar();
-            updateDayView();
         }
 
-        function cancelMyBreak() {
-            const breaks = getBreaks();
-            const index = breaks.findIndex(b => b.date === selectedDate && b.name === currentUser);
+        window.cancelMyBreak = async function() {
+            const myBreak = breaks.find(b => b.date === selectedDate && b.name === currentUser);
             
-            if (index > -1) {
-                breaks.splice(index, 1);
-                saveBreaks(breaks);
+            if (myBreak) {
+                await deleteDoc(doc(db, "breaks", myBreak.id));
                 showMessage('Pause erfolgreich storniert.', 'success');
-                renderCalendar();
-                updateDayView();
             }
         }
 

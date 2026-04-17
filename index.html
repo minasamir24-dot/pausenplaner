@@ -44,7 +44,7 @@
         .bookings-table th, .bookings-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
         .location-keller { color: var(--basement); font-weight: 500; }
         .location-kuche { color: var(--kitchen); font-weight: 500; }
-        .location-office { color: #00897B; font-weight: 500; }
+        .location-büro { color: #00897B; font-weight: 500; }
         .location-outside { color: #7B1FA2; font-weight: 500; }
         .message { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; }
         .message.error { background: #ffebee; color: var(--error); }
@@ -109,7 +109,7 @@
                     <div class="location-options">
                         <div class="location-option" id="opt-keller" onclick="pickLocation('Keller')">Keller</div>
                         <div class="location-option" id="opt-kuche" onclick="pickLocation('Kueche')">Küche</div>
-                        <div class="location-option" id="opt-office" onclick="pickLocation('Office')">Office</div>
+                        <div class="location-option" id="opt-office" onclick="pickLocation('Büro')">Büro</div>
                         <div class="location-option" id="opt-outside" onclick="pickLocation('Outside')"> Draußen</div>
                     </div>
                     <button class="btn btn-primary" onclick="doBook()">Buchen</button>
@@ -255,7 +255,7 @@
         selectedLocation = loc;
         document.getElementById('opt-keller').className = loc === 'Keller' ? 'location-option selected' : 'location-option';
         document.getElementById('opt-kuche').className = loc === 'Kueche' ? 'location-option selected' : 'location-option';
-        document.getElementById('opt-office').className = loc === 'Office' ? 'location-option selected' : 'location-option';
+        document.getElementById('opt-office').className = loc === 'Büro' ? 'location-option selected' : 'location-option';
         document.getElementById('opt-outside').className = loc === 'Outside' ? 'location-option selected' : 'location-option';
     };
 

@@ -221,12 +221,14 @@
         let form = document.getElementById('form-div');
         let my = document.getElementById('my-break');
         if (role === 'employee') {
-            let mine = breaks.find(b => b.date === selectedDate && b.name === user);
-            if (mine) {
-                form.className = 'booking-form hidden';
+            let mine = breaks.filter(b => b.date === selectedDate && b.name === user);
+            let totalMins = mine.reduce((sum, b) => sum + (b.duration || 60), 0);
+            
+            if (totalMins >= 60) {
+                // Already have full hour
+                form.className = 'hidden';
                 my.className = 'my-booking';
-                let dur = mine.duration || 60;
-                document.getElementById('break-info').innerText = mine.time + ' (' + dur + ' Min), ' + mine.location;
+                document.getElementById('break-info').innerText = mine.map(b => b.time + ' (' + (b.duration||60) + ' Min), ' + b.location).join('\n');
             } else {
                 form.className = 'booking-form';
                 my.className = 'my-booking hidden';
@@ -311,14 +313,14 @@
     };
 
     window.doCancel = async function() {
-        let mine = breaks.find(b => b.date === selectedDate && b.name === user);
-        if (mine) {
-            await db.collection('breaks').doc(mine.id).delete();
-            showMessage('✓ Storniert', 'success');
-            await loadBreaks();
-            drawCalendar();
-            showDay();
+        let mine = breaks.filter(b => b.date === selectedDate && b.name === user);
+        for (let b of mine) {
+            await db.collection('breaks').doc(b.id).delete();
         }
+        showMessage('✓ Alle Pausen storniert', 'success');
+        await loadBreaks();
+        drawCalendar();
+        showDay();
     };
 
     async function loadBreaks() {

@@ -44,6 +44,8 @@
         .bookings-table th, .bookings-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
         .location-keller { color: var(--basement); font-weight: 500; }
         .location-kuche { color: var(--kitchen); font-weight: 500; }
+        .location-office { color: #00897B; font-weight: 500; }
+        .location-outside { color: #7B1FA2; font-weight: 500; }
         .message { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; }
         .message.error { background: #ffebee; color: var(--error); }
         .message.success { background: #e8f5e9; color: var(--success); }
@@ -107,6 +109,8 @@
                     <div class="location-options">
                         <div class="location-option" id="opt-keller" onclick="pickLocation('Keller')">Keller</div>
                         <div class="location-option" id="opt-kuche" onclick="pickLocation('Kueche')">Küche</div>
+                        <div class="location-option" id="opt-office" onclick="pickLocation('Office')">Office</div>
+                        <div class="location-option" id="opt-outside" onclick="pickLocation('Outside')"> Draußen</div>
                     </div>
                     <button class="btn btn-primary" onclick="doBook()">Buchen</button>
                 </div>
@@ -221,7 +225,6 @@
             if (mine) {
                 form.className = 'booking-form hidden';
                 my.className = 'my-booking';
-                let [h, m] = mine.time.split(':');
                 let dur = mine.duration || 60;
                 document.getElementById('break-info').innerText = mine.time + ' (' + dur + ' Min), ' + mine.location;
             } else {
@@ -242,7 +245,7 @@
             list.innerHTML = dayBreaks.map(b => {
                 let [h, m] = b.time.split(':');
                 let dur = b.duration || 60;
-                let locClass = b.location === 'Keller' ? 'location-keller' : 'location-kuche';
+                let locClass = 'location-' + b.location.toLowerCase().replace('ü','u').replace(' ','-');
                 return '<tr><td>' + b.time + ' (' + dur + ' Min)</td><td class="' + locClass + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
             }).join('');
         }
@@ -252,6 +255,8 @@
         selectedLocation = loc;
         document.getElementById('opt-keller').className = loc === 'Keller' ? 'location-option selected' : 'location-option';
         document.getElementById('opt-kuche').className = loc === 'Kueche' ? 'location-option selected' : 'location-option';
+        document.getElementById('opt-office').className = loc === 'Office' ? 'location-option selected' : 'location-option';
+        document.getElementById('opt-outside').className = loc === 'Outside' ? 'location-option selected' : 'location-option';
     };
 
     window.showMessage = function(msg, type) {
@@ -295,7 +300,8 @@
         }
         
         if (userOverlaps > 0) return showMessage('Zeit überschneidet sich', 'error');
-        if (locOverlaps >= 1) return showMessage('Ort bereits belegt', 'error');
+        if (locOverlaps >= 1) return showMessage('Dieser Ort schon belegt', 'error');
+        if (userOverlaps + locOverlaps >= 2) return showMessage('Max 2 Personen gleichzeitig', 'error');
         
         await db.collection('breaks').add({ name: user, date: selectedDate, time: time, location: selectedLocation, duration: duration });
         showMessage('✓ Gebucht: ' + time + ' (' + duration + ' Min), ' + selectedLocation, 'success');

@@ -99,6 +99,11 @@
                     <h3>Pause buchen</h3>
                     <select id="hour-select"></select>
                     <select id="min-select"></select>
+                    <div style="margin-bottom: 0.5rem;">
+                        <label style="display:inline;">Dauer:</label>
+                        <label style="display:inline;margin-left:1rem;"><input type="radio" name="duration" value="30" checked> 30 Min</label>
+                        <label style="display:inline;margin-left:1rem;"><input type="radio" name="duration" value="60"> 60 Min</label>
+                    </div>
                     <div class="location-options">
                         <div class="location-option" id="opt-keller" onclick="pickLocation('Keller')">Keller</div>
                         <div class="location-option" id="opt-kuche" onclick="pickLocation('Kueche')">Küche</div>
@@ -217,7 +222,8 @@
                 form.className = 'booking-form hidden';
                 my.className = 'my-booking';
                 let [h, m] = mine.time.split(':');
-                document.getElementById('break-info').innerText = mine.time + ' - ' + (parseInt(h)+1) + ':' + m + ' Uhr, ' + mine.location;
+                let dur = mine.duration || 60;
+                document.getElementById('break-info').innerText = mine.time + ' (' + dur + ' Min), ' + mine.location;
             } else {
                 form.className = 'booking-form';
                 my.className = 'my-booking hidden';
@@ -235,8 +241,9 @@
         } else {
             list.innerHTML = dayBreaks.map(b => {
                 let [h, m] = b.time.split(':');
+                let dur = b.duration || 60;
                 let locClass = b.location === 'Keller' ? 'location-keller' : 'location-kuche';
-                return '<tr><td>' + b.time + ' - ' + (parseInt(h)+1) + ':' + m + '</td><td class="' + locClass + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
+                return '<tr><td>' + b.time + ' (' + dur + ' Min)</td><td class="' + locClass + '">' + b.location + '</td><td>' + b.name + '</td></tr>';
             }).join('');
         }
     };
@@ -257,13 +264,41 @@
         let h = document.getElementById('hour-select').value;
         let m = document.getElementById('min-select').value;
         let time = h + ':' + m;
-        let atTime = breaks.filter(b => b.date === selectedDate && b.time === time);
-        if (atTime.length >= 2) return showMessage('Zeit voll besetzt', 'error');
-        if (atTime.map(b => b.location).includes(selectedLocation)) return showMessage('Ort bereits gebucht', 'error');
-        if (breaks.find(b => b.date === selectedDate && b.name === user)) return showMessage('Bereits gebucht', 'error');
         
-        await db.collection('breaks').add({ name: user, date: selectedDate, time: time, location: selectedLocation });
-        showMessage('✓ Gebucht: ' + time + ', ' + selectedLocation, 'success');
+        // Get duration
+        let duration = 30;
+        let rads = document.getElementsByName('duration');
+        for (let r of rads) if (r.checked) duration = parseInt(r.value);
+        
+        // Check total break time for this user on this day
+        let existing = breaks.filter(b => b.date === selectedDate && b.name === user);
+        let totalMins = existing.reduce((sum, b) => sum + (b.duration || 60), 0);
+        if (totalMins + duration > 60) return showMessage('Max 60 Min pro Tag erlaubt', 'error');
+        
+        // Check conflicts based on duration
+        let startMins = parseInt(h) * 60 + parseInt(m);
+        let endMins = startMins + duration;
+        
+        let dayBreaks = breaks.filter(b => b.date === selectedDate);
+        let userOverlaps = 0;
+        let locOverlaps = 0;
+        
+        for (let b of dayBreaks) {
+            let bStart = parseInt(b.time.split(':')[0]) * 60 + parseInt(b.time.split(':')[1]);
+            let bEnd = bStart + (b.duration || 60);
+            
+            // Overlap check
+            if (!(endMins <= bStart || startMins >= bEnd)) {
+                if (b.name === user) userOverlaps++;
+                if (b.location === selectedLocation) locOverlaps++;
+            }
+        }
+        
+        if (userOverlaps > 0) return showMessage('Zeit überschneidet sich', 'error');
+        if (locOverlaps >= 1) return showMessage('Ort bereits belegt', 'error');
+        
+        await db.collection('breaks').add({ name: user, date: selectedDate, time: time, location: selectedLocation, duration: duration });
+        showMessage('✓ Gebucht: ' + time + ' (' + duration + ' Min), ' + selectedLocation, 'success');
         await loadBreaks();
         drawCalendar();
         showDay();

@@ -101,10 +101,10 @@
                     <h3>Pause buchen</h3>
                     <select id="hour-select"></select>
                     <select id="min-select"></select>
-                    <div style="margin-bottom: 0.5rem;">
-                        <label style="display:inline;">Dauer:</label>
-                        <label style="display:inline;margin-left:1rem;"><input type="radio" name="duration" value="30" checked> 30 Min</label>
-                        <label style="display:inline;margin-left:1rem;"><input type="radio" name="duration" value="60"> 60 Min</label>
+                    <div style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-weight:500;">Dauer:</span>
+                        <label style="display:flex; align-items: center; gap: 0.25rem; cursor: pointer;"><input type="radio" name="duration" value="30" checked> 30 Min</label>
+                        <label style="display:flex; align-items: center; gap: 0.25rem; cursor: pointer;"><input type="radio" name="duration" value="60"> 60 Min</label>
                     </div>
                     <div class="location-options">
                         <div class="location-option" id="opt-keller" onclick="pickLocation('Keller')">Keller</div>

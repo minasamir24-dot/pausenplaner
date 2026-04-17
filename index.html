@@ -62,8 +62,8 @@
                     <div class="role-option" id="btn-leiter" onclick="selectRole('manager')">Leiter</div>
                 </div>
                 <div id="name-div">
-                    <label>Name:</label>
-                    <input type="text" id="input-name" placeholder="Ihr Name">
+                    <label>Nickname:</label>
+                    <input type="text" id="input-name" placeholder="Ihr Spitzname">
                 </div>
                 <button class="btn btn-primary" onclick="doLogin()">Anmelden</button>
             </div>
@@ -142,7 +142,7 @@
 
     window.doLogin = function() {
         let name = document.getElementById('input-name').value.trim();
-        if (role === 'employee' && !name) return alert('Bitte Namen eingeben');
+        if (role === 'employee' && !name) return alert('Bitte Spitzname eingeben');
         user = role === 'manager' ? 'Leiter' : name;
         document.getElementById('login-view').className = 'hidden';
         document.getElementById('app-view').className = '';
